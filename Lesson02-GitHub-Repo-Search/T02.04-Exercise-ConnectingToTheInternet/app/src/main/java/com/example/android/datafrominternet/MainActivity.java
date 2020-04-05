@@ -15,6 +15,7 @@
  */
 package com.example.android.datafrominternet;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -24,6 +25,10 @@ import android.widget.TextView;
 
 import com.example.android.datafrominternet.utilities.NetworkUtils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,8 +60,40 @@ public class MainActivity extends AppCompatActivity {
         String githubQuery = mSearchBoxEditText.getText().toString();
         URL githubSearchUrl = NetworkUtils.buildUrl(githubQuery);
         mUrlDisplayTextView.setText(githubSearchUrl.toString());
-        // TODO (2) Call getResponseFromHttpUrl and display the results in mSearchResultsTextView
-        // TODO (3) Surround the call to getResponseFromHttpUrl with a try / catch block to catch an IOException
+
+        new GithubQueryAsyncTask().execute(githubSearchUrl);
+    }
+
+    public class GithubQueryAsyncTask extends AsyncTask<URL, Void, String> {
+
+        @Override
+        protected String doInBackground(URL... urls) {
+            URL searchURL = urls[0];
+            String result = null;
+            try {
+                result = NetworkUtils.getResponseFromHttpUrl(searchURL);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            if (result != null && !result.equals("")) {
+                mSearchResultsTextView.setText(result);
+
+                // Read JSON
+                try {
+                    JSONObject jsonObject = new JSONObject(result);
+                    JSONObject condition = jsonObject.getJSONObject("condition");
+                    String conditionStr = condition.getString("condition");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     @Override

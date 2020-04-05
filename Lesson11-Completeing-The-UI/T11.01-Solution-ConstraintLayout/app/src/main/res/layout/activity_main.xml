@@ -84,15 +84,15 @@
 
         <!-- COMPLETED (9) Create a TextView for the origin code, the destination code and the flight code -->
         <TextView
-            tools:text="@string/origin_code"
+            android:id="@+id/textViewOriginAirport"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/textViewOriginAirport"
             android:textAppearance="@style/TextAppearance.AppCompat.Headline"
             app:layout_constraintBottom_toBottomOf="@+id/divider"
-            app:layout_constraintRight_toRightOf="@+id/leftRectangle"
-            app:layout_constraintTop_toBottomOf="@+id/divider"
-            app:layout_constraintLeft_toLeftOf="@+id/leftRectangle" />
+            app:layout_constraintEnd_toEndOf="@+id/leftRectangle"
+            app:layout_constraintStart_toStartOf="@+id/leftRectangle"
+            app:layout_constraintTop_toTopOf="@+id/divider"
+            tools:text="@string/origin_code" />
 
         <TextView
             tools:text="@string/destination_code"

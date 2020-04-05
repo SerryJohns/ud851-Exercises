@@ -16,9 +16,13 @@
 
 package com.example.android.todolist;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
@@ -33,8 +37,7 @@ import android.view.View;
 import com.example.android.todolist.data.TaskContract;
 
 
-public class MainActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Cursor> {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
 
     // Constants for logging and referring to a unique loader
@@ -67,18 +70,27 @@ public class MainActivity extends AppCompatActivity implements
          An ItemTouchHelper enables touch behavior (like swipe and move) on each ViewHolder,
          and uses callbacks to signal when a user is performing these actions.
          */
-        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+
             @Override
-            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder viewHolder1) {
                 return false;
             }
 
-            // Called when a user swipes left or right on a ViewHolder
             @Override
-            public void onSwiped(RecyclerView.ViewHolder viewHolder, int swipeDir) {
-                // Here is where you'll implement swipe to delete
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+                int id = (int) viewHolder.itemView.getTag();
+                String stringId = "" + id;
+                Uri uri = TaskContract.TaskEntry.CONTENT_URI;
+                uri = uri.buildUpon().appendPath(stringId).build();
+
+                getContentResolver().delete(uri, null, null);
+
+                // Restart loader to re-query for all tasks after deletion
+                getSupportLoaderManager().restartLoader(TASK_LOADER_ID, null, MainActivity.this);
             }
-        }).attachToRecyclerView(mRecyclerView);
+        });
+        itemTouchHelper.attachToRecyclerView(mRecyclerView);
 
         /*
          Set the Floating Action Button (FAB) to its corresponding View.
@@ -117,89 +129,63 @@ public class MainActivity extends AppCompatActivity implements
         getSupportLoaderManager().restartLoader(TASK_LOADER_ID, null, this);
     }
 
-
     /**
      * Instantiates and returns a new AsyncTaskLoader with the given ID.
      * This loader will return task data as a Cursor or null if an error occurs.
      *
      * Implements the required callbacks to take care of loading data at all stages of loading.
      */
+
+    @SuppressLint("StaticFieldLeak")
+    @NonNull
     @Override
-    public Loader<Cursor> onCreateLoader(int id, final Bundle loaderArgs) {
-
+    public Loader<Cursor> onCreateLoader(int i, @Nullable Bundle bundle) {
         return new AsyncTaskLoader<Cursor>(this) {
-
-            // Initialize a Cursor, this will hold all the task data
             Cursor mTaskData = null;
 
-            // onStartLoading() is called when a loader first starts loading data
             @Override
             protected void onStartLoading() {
+                super.onStartLoading();
                 if (mTaskData != null) {
-                    // Delivers any previously loaded data immediately
                     deliverResult(mTaskData);
                 } else {
-                    // Force a new load
                     forceLoad();
                 }
             }
 
-            // loadInBackground() performs asynchronous loading of data
+            @Nullable
             @Override
             public Cursor loadInBackground() {
-                // Will implement to load data
-
-                // Query and load all task data in the background; sort by priority
-                // [Hint] use a try/catch block to catch any errors in loading data
-
                 try {
-                    return getContentResolver().query(TaskContract.TaskEntry.CONTENT_URI,
+                    return getContentResolver().query(
+                            TaskContract.TaskEntry.CONTENT_URI,
                             null,
                             null,
                             null,
                             TaskContract.TaskEntry.COLUMN_PRIORITY);
-
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to asynchronously load data.");
+                    Log.e(TAG, "loadInBackground: Failed to asyncronously load data");
                     e.printStackTrace();
                     return null;
                 }
             }
 
-            // deliverResult sends the result of the load, a Cursor, to the registered listener
-            public void deliverResult(Cursor data) {
+            @Override
+            public void deliverResult(@Nullable Cursor data) {
                 mTaskData = data;
                 super.deliverResult(data);
             }
         };
-
     }
 
-
-    /**
-     * Called when a previously created loader has finished its load.
-     *
-     * @param loader The Loader that has finished.
-     * @param data The data generated by the Loader.
-     */
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        // Update the data that the adapter uses to create ViewHolders
-        mAdapter.swapCursor(data);
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
+        mAdapter.swapCursor(cursor);
     }
 
-
-    /**
-     * Called when a previously created loader is being reset, and thus
-     * making its data unavailable.
-     * onLoaderReset removes any references this activity had to the loader's data.
-     *
-     * @param loader The Loader that is being reset.
-     */
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-            mAdapter.swapCursor(null);
-        }
-
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+        mAdapter.swapCursor(null);
+    }
 }
 
